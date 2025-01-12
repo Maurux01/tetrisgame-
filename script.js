@@ -1,85 +1,170 @@
-const board = document.getElementById("board");
-const nextPieceContainer = document.getElementById("next-piece");
-const scoreElement = document.getElementById("score");
+const canvas = document.getElementById('tetris');
+const context = canvas.getContext('2d');
 
-// Dimensiones del tablero
-const BOARD_WIDTH = 10;
-const BOARD_HEIGHT = 20;
+const COLS = 10;
+const ROWS = 20;
+const BLOCK_SIZE = 30;
 
-// Tablero y variables globales
-let boardArray = Array.from({ length: BOARD_HEIGHT }, () => Array(BOARD_WIDTH).fill(0));
-let currentPiece;
-let nextPiece;
-let score = 0;
+context.scale(BLOCK_SIZE, BLOCK_SIZE);
 
-// Tetrominós y colores
-const tetrominos = [
-  { shape: [[1, 1, 1, 1]], color: "cyan" }, // I
-  { shape: [[1, 1], [1, 1]], color: "yellow" }, // O
-  { shape: [[0, 1, 0], [1, 1, 1]], color: "purple" }, // T
-  { shape: [[1, 1, 0], [0, 1, 1]], color: "green" }, // S
-  { shape: [[0, 1, 1], [1, 1, 0]], color: "red" }, // Z
-  { shape: [[1, 0, 0], [1, 1, 1]], color: "blue" }, // L
-  { shape: [[0, 0, 1], [1, 1, 1]], color: "orange" }, // J
+const arena = createMatrix(COLS, ROWS);
+
+const colors = [
+  null,
+  'red',
+  'blue',
+  'green',
+  'yellow',
+  'purple',
+  'orange',
+  'cyan'
 ];
 
-// Generar tablero inicial
-function createBoard() {
-  board.innerHTML = "";
-  for (let row = 0; row < BOARD_HEIGHT; row++) {
-    for (let col = 0; col < BOARD_WIDTH; col++) {
-      const cell = document.createElement("div");
-      cell.classList.add("cell");
-      if (boardArray[row][col] !== 0) {
-        cell.style.backgroundColor = boardArray[row][col];
-      }
-      board.appendChild(cell);
-    }
+const player = {
+  pos: { x: 0, y: 0 },
+  matrix: createPiece('T'),
+};
+
+function createMatrix(w, h) {
+  const matrix = [];
+  while (h--) {
+    matrix.push(new Array(w).fill(0));
+  }
+  return matrix;
+}
+
+function createPiece(type) {
+  switch (type) {
+    case 'T':
+      return [
+        [0, 1, 0],
+        [1, 1, 1],
+        [0, 0, 0],
+      ];
+    case 'O':
+      return [
+        [2, 2],
+        [2, 2],
+      ];
+    case 'L':
+      return [
+        [0, 3, 0],
+        [0, 3, 0],
+        [0, 3, 3],
+      ];
+    case 'J':
+      return [
+        [0, 4, 0],
+        [0, 4, 0],
+        [4, 4, 0],
+      ];
+    case 'I':
+      return [
+        [0, 5, 0, 0],
+        [0, 5, 0, 0],
+        [0, 5, 0, 0],
+        [0, 5, 0, 0],
+      ];
+    case 'S':
+      return [
+        [0, 6, 6],
+        [6, 6, 0],
+        [0, 0, 0],
+      ];
+    case 'Z':
+      return [
+        [7, 7, 0],
+        [0, 7, 7],
+        [0, 0, 0],
+      ];
   }
 }
 
-// Generar nueva pieza
-function generatePiece() {
-  const randomIndex = Math.floor(Math.random() * tetrominos.length);
-  return {
-    shape: tetrominos[randomIndex].shape,
-    color: tetrominos[randomIndex].color,
-    row: 0,
-    col: Math.floor(BOARD_WIDTH / 2) - 1,
-  };
+function drawMatrix(matrix, offset) {
+  matrix.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value !== 0) {
+        context.fillStyle = colors[value];
+        context.fillRect(x + offset.x, y + offset.y, 1, 1);
+      }
+    });
+  });
 }
 
-// Dibujar pieza en el tablero
-function drawPiece(piece, clear = false) {
-  const { shape, row, col, color } = piece;
-  for (let r = 0; r < shape.length; r++) {
-    for (let c = 0; c < shape[r].length; c++) {
-      if (shape[r][c]) {
-        const x = row + r;
-        const y = col + c;
-        if (x >= 0 && x < BOARD_HEIGHT && y >= 0 && y < BOARD_WIDTH) {
-          boardArray[x][y] = clear ? 0 : color;
-        }
+function draw() {
+  context.fillStyle = '#000';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawMatrix(arena, { x: 0, y: 0 });
+  drawMatrix(player.matrix, player.pos);
+}
+
+function merge(arena, player) {
+  player.matrix.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value !== 0) {
+        arena[y + player.pos.y][x + player.pos.x] = value;
+      }
+    });
+  });
+}
+
+function collide(arena, player) {
+  const [m, o] = [player.matrix, player.pos];
+  for (let y = 0; y < m.length; ++y) {
+    for (let x = 0; x < m[y].length; ++x) {
+      if (
+        m[y][x] !== 0 &&
+        (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0
+      ) {
+        return true;
       }
     }
   }
+  return false;
 }
 
-// Mover pieza hacia abajo
-function moveDown() {
-  drawPiece(currentPiece, true);
-  currentPiece.row++;
-  drawPiece(currentPiece);
-  createBoard();
+function playerDrop() {
+  player.pos.y++;
+  if (collide(arena, player)) {
+    player.pos.y--;
+    merge(arena, player);
+    player.pos.y = 0;
+  }
+  dropCounter = 0;
 }
 
-// Iniciar juego
-function startGame() {
-  currentPiece = generatePiece();
-  nextPiece = generatePiece();
-  drawPiece(currentPiece);
-  createBoard();
+let dropCounter = 0;
+let dropInterval = 1000;
+
+let lastTime = 0;
+function update(time = 0) {
+  const deltaTime = time - lastTime;
+  lastTime = time;
+
+  dropCounter += deltaTime;
+  if (dropCounter > dropInterval) {
+    playerDrop();
+  }
+
+  draw();
+  requestAnimationFrame(update);
 }
 
-// Inicialización
-startGame();
+document.addEventListener('keydown', event => {
+  if (event.key === 'ArrowLeft') {
+    player.pos.x--;
+    if (collide(arena, player)) {
+      player.pos.x++;
+    }
+  } else if (event.key === 'ArrowRight') {
+    player.pos.x++;
+    if (collide(arena, player)) {
+      player.pos.x--;
+    }
+  } else if (event.key === 'ArrowDown') {
+    playerDrop();
+  }
+});
+
+update();
