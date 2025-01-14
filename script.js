@@ -1,224 +1,157 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const grid = document.querySelector('.grid');
-  const scoreDisplay = document.querySelector('#score');
-  const startBtn = document.querySelector('#start-button');
-  const width = 10;
-  let timerId;
-  let score = 0;
+const canvas = document.getElementById('tetris');
+const ctx = canvas.getContext('2d');
 
-  const colors = ['orange', 'red', 'purple', 'green', 'blue'];
+const ROWS = 20;
+const COLUMNS = 10;
+const BLOCK_SIZE = 30;
+const COLORS = ['#FF5733', '#33FF57', '#3357FF', '#F1C40F', '#8E44AD', '#1ABC9C', '#E74C3C'];
 
-  // Tetrominoes
-  const lTetromino = [
-    [1, width + 1, width * 2 + 1, 2],
-    [width, width + 1, width + 2, width * 2 + 2],
-    [1, width + 1, width * 2 + 1, width * 2],
-    [width, width * 2, width * 2 + 1, width * 2 + 2],
-  ];
+const tetrominos = [
+  [[1, 1, 1, 1]], // I
+  [[1, 1], [1, 1]], // O
+  [[0, 1, 0], [1, 1, 1]], // T
+  [[1, 1, 0], [0, 1, 1]], // S
+  [[0, 1, 1], [1, 1, 0]], // Z
+  [[1, 0, 0], [1, 1, 1]], // J
+  [[0, 0, 1], [1, 1, 1]], // L
+];
 
-  const zTetromino = [
-    [0, width, width + 1, width * 2 + 1],
-    [width + 1, width + 2, width * 2, width * 2 + 1],
-    [0, width, width + 1, width * 2 + 1],
-    [width + 1, width + 2, width * 2, width * 2 + 1],
-  ];
+let board = Array.from({ length: ROWS }, () => Array(COLUMNS).fill(0));
+let currentPiece = createPiece();
+let gameOver = false;
 
-  const tTetromino = [
-    [1, width, width + 1, width + 2],
-    [1, width + 1, width + 2, width * 2 + 1],
-    [width, width + 1, width + 2, width * 2 + 1],
-    [1, width, width + 1, width * 2 + 1],
-  ];
+function createPiece() {
+  const type = Math.floor(Math.random() * tetrominos.length);
+  return {
+    shape: tetrominos[type],
+    x: Math.floor(COLUMNS / 2) - 1,
+    y: 0,
+    color: COLORS[type],
+  };
+}
 
-  const oTetromino = [
-    [0, 1, width, width + 1],
-    [0, 1, width, width + 1],
-    [0, 1, width, width + 1],
-    [0, 1, width, width + 1],
-  ];
-
-  const iTetromino = [
-    [1, width + 1, width * 2 + 1, width * 3 + 1],
-    [width, width + 1, width + 2, width + 3],
-    [1, width + 1, width * 2 + 1, width * 3 + 1],
-    [width, width + 1, width + 2, width + 3],
-  ];
-
-  const theTetrominoes = [
-    lTetromino,
-    zTetromino,
-    tTetromino,
-    oTetromino,
-    iTetromino,
-  ];
-
-  let currentPosition = 4;
-  let currentRotation = 0;
-
-  // Randomly select a Tetromino and its first rotation
-  let random = Math.floor(Math.random() * theTetrominoes.length);
-  let current = theTetrominoes[random][currentRotation];
-
-  // Draw the Tetromino
-  function draw() {
-    current.forEach((index) => {
-      grid.children[currentPosition + index].classList.add('tetromino');
-      grid.children[currentPosition + index].style.backgroundColor =
-        colors[random];
-    });
-  }
-
-  // Undraw the Tetromino
-  function undraw() {
-    current.forEach((index) => {
-      grid.children[currentPosition + index].classList.remove('tetromino');
-      grid.children[currentPosition + index].style.backgroundColor = '';
-    });
-  }
-
-  // Assign functions to keyCodes
-  function control(e) {
-    if (e.keyCode === 37) {
-      moveLeft();
-    } else if (e.keyCode === 38) {
-      rotate();
-    } else if (e.keyCode === 39) {
-      moveRight();
-    } else if (e.keyCode === 40) {
-      moveDown();
-    }
-  }
-  document.addEventListener('keydown', control);
-
-  // Move down function
-  function moveDown() {
-    undraw();
-    currentPosition += width;
-    draw();
-    freeze();
-  }
-
-  // Freeze function
-  function freeze() {
-    if (
-      current.some((index) =>
-        grid.children[currentPosition + index + width].classList.contains('taken')
-      )
-    ) {
-      current.forEach((index) =>
-        grid.children[currentPosition + index].classList.add('taken')
-      );
-      // Start a new Tetromino falling
-      random = Math.floor(Math.random() * theTetrominoes.length);
-      current = theTetrominoes[random][currentRotation];
-      currentPosition = 4;
-      draw();
-      addScore();
-      gameOver();
-    }
-  }
-
-  // Move the Tetromino left, unless it is at the edge or there is a blockage
-  function moveLeft() {
-    undraw();
-    const isAtLeftEdge = current.some(
-      (index) => (currentPosition + index) % width === 0
-    );
-
-    if (!isAtLeftEdge) currentPosition -= 1;
-
-    if (
-      current.some((index) =>
-        grid.children[currentPosition + index].classList.contains('taken')
-      )
-    ) {
-      currentPosition += 1;
-    }
-
-    draw();
-  }
-
-  // Move the Tetromino right, unless it is at the edge or there is a blockage
-  function moveRight() {
-    undraw();
-    const isAtRightEdge = current.some(
-      (index) => (currentPosition + index) % width === width - 1
-    );
-
-    if (!isAtRightEdge) currentPosition += 1;
-
-    if (
-      current.some((index) =>
-        grid.children[currentPosition + index].classList.contains('taken')
-      )
-    ) {
-      currentPosition -= 1;
-    }
-
-    draw();
-  }
-
-  // Rotate the Tetromino
-  function rotate() {
-    undraw();
-    currentRotation++;
-    if (currentRotation === current.length) {
-      currentRotation = 0;
-    }
-    current = theTetrominoes[random][currentRotation];
-    draw();
-  }
-
-  // Add score
-  function addScore() {
-    for (let i = 0; i < 199; i += width) {
-      const row = [
-        i,
-        i + 1,
-        i + 2,
-        i + 3,
-        i + 4,
-        i + 5,
-        i + 6,
-        i + 7,
-        i + 8,
-        i + 9,
-      ];
-
-      if (row.every((index) => grid.children[index].classList.contains('taken'))) {
-        score += 10;
-        scoreDisplay.innerHTML = score;
-        row.forEach((index) => {
-          grid.children[index].classList.remove('taken');
-          grid.children[index].classList.remove('tetromino');
-          grid.children[index].style.backgroundColor = '';
-        });
-        const squaresRemoved = Array.from(grid.children).splice(i, width);
-        squaresRemoved.forEach((square) => grid.appendChild(square));
+function drawBoard() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLUMNS; col++) {
+      if (board[row][col]) {
+        ctx.fillStyle = board[row][col];
+        ctx.fillRect(col * BLOCK_SIZE, row * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
       }
     }
   }
+}
 
-  // Game over
-  function gameOver() {
-    if (
-      current.some((index) =>
-        grid.children[currentPosition + index].classList.contains('taken')
-      )
-    ) {
-      scoreDisplay.innerHTML = 'Game Over';
-      clearInterval(timerId);
+function drawPiece() {
+  for (let row = 0; row < currentPiece.shape.length; row++) {
+    for (let col = 0; col < currentPiece.shape[row].length; col++) {
+      if (currentPiece.shape[row][col]) {
+        ctx.fillStyle = currentPiece.color;
+        ctx.fillRect(
+          (currentPiece.x + col) * BLOCK_SIZE,
+          (currentPiece.y + row) * BLOCK_SIZE,
+          BLOCK_SIZE,
+          BLOCK_SIZE
+        );
+      }
     }
   }
+}
 
-  // Start/Pause button
-  startBtn.addEventListener('click', () => {
-    if (timerId) {
-      clearInterval(timerId);
-      timerId = null;
-    } else {
-      draw();
-      timerId = setInterval(moveDown, 1000);
+function isValidMove() {
+  for (let row = 0; row < currentPiece.shape.length; row++) {
+    for (let col = 0; col < currentPiece.shape[row].length; col++) {
+      if (currentPiece.shape[row][col]) {
+        const x = currentPiece.x + col;
+        const y = currentPiece.y + row;
+        if (x < 0 || x >= COLUMNS || y >= ROWS || (y >= 0 && board[y][x])) {
+          return false;
+        }
+      }
     }
-  });
-});
+  }
+  return true;
+}
+
+function placePiece() {
+  for (let row = 0; row < currentPiece.shape.length; row++) {
+    for (let col = 0; col < currentPiece.shape[row].length; col++) {
+      if (currentPiece.shape[row][col]) {
+        const x = currentPiece.x + col;
+        const y = currentPiece.y + row;
+        if (y >= 0) {
+          board[y][x] = currentPiece.color;
+        }
+      }
+    }
+  }
+}
+
+function clearRows() {
+  for (let row = ROWS - 1; row >= 0; row--) {
+    if (board[row].every(cell => cell !== 0)) {
+      board.splice(row, 1);
+      board.unshift(Array(COLUMNS).fill(0));
+    }
+  }
+}
+
+function rotatePiece() {
+  const rotatedShape = currentPiece.shape[0].map((_, index) =>
+    currentPiece.shape.map(row => row[index])
+  );
+  const originalShape = currentPiece.shape;
+  currentPiece.shape = rotatedShape;
+
+  if (!isValidMove()) {
+    currentPiece.shape = originalShape;
+  }
+}
+
+function movePiece(direction) {
+  currentPiece.x += direction;
+  if (!isValidMove()) {
+    currentPiece.x -= direction;
+  }
+}
+
+function dropPiece() {
+  currentPiece.y++;
+  if (!isValidMove()) {
+    currentPiece.y--;
+    placePiece();
+    clearRows();
+    currentPiece = createPiece();
+    if (!isValidMove()) {
+      gameOver = true;
+    }
+  }
+}
+
+function handleKeyPress(event) {
+  if (gameOver) return;
+  if (event.key === 'ArrowLeft') {
+    movePiece(-1);
+  } else if (event.key === 'ArrowRight') {
+    movePiece(1);
+  } else if (event.key === 'ArrowDown') {
+    dropPiece();
+  } else if (event.key === 'ArrowUp') {
+    rotatePiece();
+  }
+}
+
+function gameLoop() {
+  if (gameOver) {
+    alert('Game Over!');
+    return;
+  }
+  drawBoard();
+  drawPiece();
+  dropPiece();
+  requestAnimationFrame(gameLoop);
+}
+
+document.addEventListener('keydown', handleKeyPress);
+
+gameLoop();
