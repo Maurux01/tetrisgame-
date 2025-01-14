@@ -1,158 +1,214 @@
-const canvas = document.getElementById('tetris');
+const canvas = document.getElementById('game-board');
 const ctx = canvas.getContext('2d');
-
-const ROWS = 20;
-const COLUMNS = 10;
 const BLOCK_SIZE = 30;
-const COLORS = ['#FF5733', '#33FF57', '#3357FF', '#F1C40F', '#8E44AD', '#1ABC9C', '#E74C3C'];
+const BOARD_WIDTH = 10;
+const BOARD_HEIGHT = 20;
+let score = 0;
+let level = 1;
+let gameLoop;
+let gameBoard = Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(0));
+let currentPiece;
+let gameOver = false;
 
-const tetrominos = [
-  [[1, 1, 1, 1]], // I
-  [[1, 1], [1, 1]], // O
-  [[0, 1, 0], [1, 1, 1]], // T
-  [[1, 1, 0], [0, 1, 1]], // S
-  [[0, 1, 1], [1, 1, 0]], // Z
-  [[1, 0, 0], [1, 1, 1]], // J
-  [[0, 0, 1], [1, 1, 1]], // L
+const PIECES = [
+    [[1, 1, 1, 1]], // I
+    [[1, 1], [1, 1]], // O
+    [[1, 1, 1], [0, 1, 0]], // T
+    [[1, 1, 1], [1, 0, 0]], // L
+    [[1, 1, 1], [0, 0, 1]], // J
+    [[1, 1, 0], [0, 1, 1]], // S
+    [[0, 1, 1], [1, 1, 0]]  // Z
 ];
 
-let board = Array.from({ length: ROWS }, () => Array(COLUMNS).fill(0));
-let currentPiece = createPiece();
-let gameOver = false;
-let gameSpeed = 500; // Tiempo de actualización en milisegundos (más alto = más lento)
+const COLORS = [
+    '#00f0f0', // cyan
+    '#f0f000', // yellow
+    '#a000f0', // purple
+    '#f0a000', // orange
+    '#0000f0', // blue
+    '#00f000', // green
+    '#f00000'  // red
+];
 
-function createPiece() {
-  const type = Math.floor(Math.random() * tetrominos.length);
-  return {
-    shape: tetrominos[type],
-    x: Math.floor(COLUMNS / 2) - 1,
-    y: 0,
-    color: COLORS[type],
-  };
-}
-
-function drawBoard() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLUMNS; col++) {
-      if (board[row][col]) {
-        ctx.fillStyle = board[row][col];
-        ctx.fillRect(col * BLOCK_SIZE, row * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-      }
+class Piece {
+    constructor(shape, color) {
+        this.shape = shape;
+        this.color = color;
+        this.x = Math.floor(BOARD_WIDTH / 2) - Math.floor(shape[0].length / 2);
+        this.y = 0;
     }
-  }
 }
 
-function drawPiece() {
-  for (let row = 0; row < currentPiece.shape.length; row++) {
-    for (let col = 0; col < currentPiece.shape[row].length; col++) {
-      if (currentPiece.shape[row][col]) {
+function createNewPiece() {
+    const randomIndex = Math.floor(Math.random() * PIECES.length);
+    return new Piece(PIECES[randomIndex], COLORS[randomIndex]);
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw the board
+    for (let y = 0; y < BOARD_HEIGHT; y++) {
+        for (let x = 0; x < BOARD_WIDTH; x++) {
+            if (gameBoard[y][x]) {
+                ctx.fillStyle = gameBoard[y][x];
+                ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+            }
+        }
+    }
+    
+    // Draw current piece
+    if (currentPiece) {
         ctx.fillStyle = currentPiece.color;
-        ctx.fillRect(
-          (currentPiece.x + col) * BLOCK_SIZE,
-          (currentPiece.y + row) * BLOCK_SIZE,
-          BLOCK_SIZE,
-          BLOCK_SIZE
-        );
-      }
-    }
-  }
-}
-
-function isValidMove() {
-  for (let row = 0; row < currentPiece.shape.length; row++) {
-    for (let col = 0; col < currentPiece.shape[row].length; col++) {
-      if (currentPiece.shape[row][col]) {
-        const x = currentPiece.x + col;
-        const y = currentPiece.y + row;
-        if (x < 0 || x >= COLUMNS || y >= ROWS || (y >= 0 && board[y][x])) {
-          return false;
+        for (let y = 0; y < currentPiece.shape.length; y++) {
+            for (let x = 0; x < currentPiece.shape[y].length; x++) {
+                if (currentPiece.shape[y][x]) {
+                    ctx.fillRect(
+                        (currentPiece.x + x) * BLOCK_SIZE,
+                        (currentPiece.y + y) * BLOCK_SIZE,
+                        BLOCK_SIZE - 1,
+                        BLOCK_SIZE - 1
+                    );
+                }
+            }
         }
-      }
     }
-  }
-  return true;
 }
 
-function placePiece() {
-  for (let row = 0; row < currentPiece.shape.length; row++) {
-    for (let col = 0; col < currentPiece.shape[row].length; col++) {
-      if (currentPiece.shape[row][col]) {
-        const x = currentPiece.x + col;
-        const y = currentPiece.y + row;
-        if (y >= 0) {
-          board[y][x] = currentPiece.color;
+function collision(piece, moveX = 0, moveY = 0) {
+    for (let y = 0; y < piece.shape.length; y++) {
+        for (let x = 0; x < piece.shape[y].length; x++) {
+            if (piece.shape[y][x]) {
+                const newX = piece.x + x + moveX;
+                const newY = piece.y + y + moveY;
+                
+                if (newX < 0 || newX >= BOARD_WIDTH || newY >= BOARD_HEIGHT) {
+                    return true;
+                }
+                
+                if (newY >= 0 && gameBoard[newY][newX]) {
+                    return true;
+                }
+            }
         }
-      }
     }
-  }
+    return false;
 }
 
-function clearRows() {
-  for (let row = ROWS - 1; row >= 0; row--) {
-    if (board[row].every(cell => cell !== 0)) {
-      board.splice(row, 1);
-      board.unshift(Array(COLUMNS).fill(0));
+function mergePiece() {
+    for (let y = 0; y < currentPiece.shape.length; y++) {
+        for (let x = 0; x < currentPiece.shape[y].length; x++) {
+            if (currentPiece.shape[y][x]) {
+                if (currentPiece.y + y <= 0) {
+                    gameOver = true;
+                    return;
+                }
+                gameBoard[currentPiece.y + y][currentPiece.x + x] = currentPiece.color;
+            }
+        }
     }
-  }
+}
+
+function clearLines() {
+    let linesCleared = 0;
+    
+    for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
+        if (gameBoard[y].every(cell => cell !== 0)) {
+            gameBoard.splice(y, 1);
+            gameBoard.unshift(Array(BOARD_WIDTH).fill(0));
+            linesCleared++;
+            y++;
+        }
+    }
+    
+    if (linesCleared > 0) {
+        score += linesCleared * 100 * level;
+        document.getElementById('score').textContent = score;
+        if (score >= level * 1000) {
+            level++;
+            document.getElementById('level').textContent = level;
+        }
+    }
 }
 
 function rotatePiece() {
-  const rotatedShape = currentPiece.shape[0].map((_, index) =>
-    currentPiece.shape.map(row => row[index])
-  );
-  const originalShape = currentPiece.shape;
-  currentPiece.shape = rotatedShape;
-
-  if (!isValidMove()) {
-    currentPiece.shape = originalShape;
-  }
-}
-
-function movePiece(direction) {
-  currentPiece.x += direction;
-  if (!isValidMove()) {
-    currentPiece.x -= direction;
-  }
-}
-
-function dropPiece() {
-  currentPiece.y++;
-  if (!isValidMove()) {
-    currentPiece.y--;
-    placePiece();
-    clearRows();
-    currentPiece = createPiece();
-    if (!isValidMove()) {
-      gameOver = true;
+    const rotated = [];
+    for (let i = 0; i < currentPiece.shape[0].length; i++) {
+        rotated.push([]);
+        for (let j = currentPiece.shape.length - 1; j >= 0; j--) {
+            rotated[i].push(currentPiece.shape[j][i]);
+        }
     }
-  }
+    
+    const previousShape = currentPiece.shape;
+    currentPiece.shape = rotated;
+    
+    if (collision(currentPiece)) {
+        currentPiece.shape = previousShape;
+    }
 }
 
-function handleKeyPress(event) {
-  if (gameOver) return;
-  if (event.key === 'ArrowLeft') {
-    movePiece(-1);
-  } else if (event.key === 'ArrowRight') {
-    movePiece(1);
-  } else if (event.key === 'ArrowDown') {
-    dropPiece();
-  } else if (event.key === 'ArrowUp') {
-    rotatePiece();
-  }
+function update() {
+    if (!collision(currentPiece, 0, 1)) {
+        currentPiece.y++;
+    } else {
+        mergePiece();
+        if (gameOver) {
+            endGame();
+            return;
+        }
+        clearLines();
+        currentPiece = createNewPiece();
+    }
+    draw();
 }
 
-function gameLoop() {
-  if (gameOver) {
-    alert('Game Over!');
-    return;
-  }
-  drawBoard();
-  drawPiece();
-  dropPiece();
+function startGame() {
+    gameBoard = Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(0));
+    score = 0;
+    level = 1;
+    gameOver = false;
+    document.getElementById('score').textContent = '0';
+    document.getElementById('level').textContent = '1';
+    document.getElementById('game-over').style.display = 'none';
+    currentPiece = createNewPiece();
+    if (gameLoop) clearInterval(gameLoop);
+    gameLoop = setInterval(() => update(), 1000 / level);
+    draw();
 }
 
-// Cambié requestAnimationFrame por setInterval para controlar el tiempo de actualización
-setInterval(gameLoop, gameSpeed);
+function endGame() {
+    clearInterval(gameLoop);
+    document.getElementById('game-over').style.display = 'block';
+}
 
-document.addEventListener('keydown', handleKeyPress);
+document.addEventListener('keydown', (e) => {
+    if (gameOver) return;
+    
+    switch (e.key) {
+        case 'ArrowLeft':
+            if (!collision(currentPiece, -1, 0)) {
+                currentPiece.x--;
+                draw();
+            }
+            break;
+        case 'ArrowRight':
+            if (!collision(currentPiece, 1, 0)) {
+                currentPiece.x++;
+                draw();
+            }
+            break;
+        case 'ArrowDown':
+            if (!collision(currentPiece, 0, 1)) {
+                currentPiece.y++;
+                draw();
+            }
+            break;
+        case 'ArrowUp':
+            rotatePiece();
+            draw();
+            break;
+    }
+});
+
+startGame();
