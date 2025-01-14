@@ -1,170 +1,224 @@
-const canvas = document.getElementById('tetris');
-const context = canvas.getContext('2d');
+document.addEventListener('DOMContentLoaded', () => {
+  const grid = document.querySelector('.grid');
+  const scoreDisplay = document.querySelector('#score');
+  const startBtn = document.querySelector('#start-button');
+  const width = 10;
+  let timerId;
+  let score = 0;
 
-const COLS = 10;
-const ROWS = 20;
-const BLOCK_SIZE = 30;
+  const colors = ['orange', 'red', 'purple', 'green', 'blue'];
 
-context.scale(BLOCK_SIZE, BLOCK_SIZE);
+  // Tetrominoes
+  const lTetromino = [
+    [1, width + 1, width * 2 + 1, 2],
+    [width, width + 1, width + 2, width * 2 + 2],
+    [1, width + 1, width * 2 + 1, width * 2],
+    [width, width * 2, width * 2 + 1, width * 2 + 2],
+  ];
 
-const arena = createMatrix(COLS, ROWS);
+  const zTetromino = [
+    [0, width, width + 1, width * 2 + 1],
+    [width + 1, width + 2, width * 2, width * 2 + 1],
+    [0, width, width + 1, width * 2 + 1],
+    [width + 1, width + 2, width * 2, width * 2 + 1],
+  ];
 
-const colors = [
-  null,
-  'red',
-  'blue',
-  'green',
-  'yellow',
-  'purple',
-  'orange',
-  'cyan'
-];
+  const tTetromino = [
+    [1, width, width + 1, width + 2],
+    [1, width + 1, width + 2, width * 2 + 1],
+    [width, width + 1, width + 2, width * 2 + 1],
+    [1, width, width + 1, width * 2 + 1],
+  ];
 
-const player = {
-  pos: { x: 0, y: 0 },
-  matrix: createPiece('T'),
-};
+  const oTetromino = [
+    [0, 1, width, width + 1],
+    [0, 1, width, width + 1],
+    [0, 1, width, width + 1],
+    [0, 1, width, width + 1],
+  ];
 
-function createMatrix(w, h) {
-  const matrix = [];
-  while (h--) {
-    matrix.push(new Array(w).fill(0));
-  }
-  return matrix;
-}
+  const iTetromino = [
+    [1, width + 1, width * 2 + 1, width * 3 + 1],
+    [width, width + 1, width + 2, width + 3],
+    [1, width + 1, width * 2 + 1, width * 3 + 1],
+    [width, width + 1, width + 2, width + 3],
+  ];
 
-function createPiece(type) {
-  switch (type) {
-    case 'T':
-      return [
-        [0, 1, 0],
-        [1, 1, 1],
-        [0, 0, 0],
-      ];
-    case 'O':
-      return [
-        [2, 2],
-        [2, 2],
-      ];
-    case 'L':
-      return [
-        [0, 3, 0],
-        [0, 3, 0],
-        [0, 3, 3],
-      ];
-    case 'J':
-      return [
-        [0, 4, 0],
-        [0, 4, 0],
-        [4, 4, 0],
-      ];
-    case 'I':
-      return [
-        [0, 5, 0, 0],
-        [0, 5, 0, 0],
-        [0, 5, 0, 0],
-        [0, 5, 0, 0],
-      ];
-    case 'S':
-      return [
-        [0, 6, 6],
-        [6, 6, 0],
-        [0, 0, 0],
-      ];
-    case 'Z':
-      return [
-        [7, 7, 0],
-        [0, 7, 7],
-        [0, 0, 0],
-      ];
-  }
-}
+  const theTetrominoes = [
+    lTetromino,
+    zTetromino,
+    tTetromino,
+    oTetromino,
+    iTetromino,
+  ];
 
-function drawMatrix(matrix, offset) {
-  matrix.forEach((row, y) => {
-    row.forEach((value, x) => {
-      if (value !== 0) {
-        context.fillStyle = colors[value];
-        context.fillRect(x + offset.x, y + offset.y, 1, 1);
-      }
+  let currentPosition = 4;
+  let currentRotation = 0;
+
+  // Randomly select a Tetromino and its first rotation
+  let random = Math.floor(Math.random() * theTetrominoes.length);
+  let current = theTetrominoes[random][currentRotation];
+
+  // Draw the Tetromino
+  function draw() {
+    current.forEach((index) => {
+      grid.children[currentPosition + index].classList.add('tetromino');
+      grid.children[currentPosition + index].style.backgroundColor =
+        colors[random];
     });
-  });
-}
+  }
 
-function draw() {
-  context.fillStyle = '#000';
-  context.fillRect(0, 0, canvas.width, canvas.height);
-
-  drawMatrix(arena, { x: 0, y: 0 });
-  drawMatrix(player.matrix, player.pos);
-}
-
-function merge(arena, player) {
-  player.matrix.forEach((row, y) => {
-    row.forEach((value, x) => {
-      if (value !== 0) {
-        arena[y + player.pos.y][x + player.pos.x] = value;
-      }
+  // Undraw the Tetromino
+  function undraw() {
+    current.forEach((index) => {
+      grid.children[currentPosition + index].classList.remove('tetromino');
+      grid.children[currentPosition + index].style.backgroundColor = '';
     });
-  });
-}
+  }
 
-function collide(arena, player) {
-  const [m, o] = [player.matrix, player.pos];
-  for (let y = 0; y < m.length; ++y) {
-    for (let x = 0; x < m[y].length; ++x) {
-      if (
-        m[y][x] !== 0 &&
-        (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0
-      ) {
-        return true;
+  // Assign functions to keyCodes
+  function control(e) {
+    if (e.keyCode === 37) {
+      moveLeft();
+    } else if (e.keyCode === 38) {
+      rotate();
+    } else if (e.keyCode === 39) {
+      moveRight();
+    } else if (e.keyCode === 40) {
+      moveDown();
+    }
+  }
+  document.addEventListener('keydown', control);
+
+  // Move down function
+  function moveDown() {
+    undraw();
+    currentPosition += width;
+    draw();
+    freeze();
+  }
+
+  // Freeze function
+  function freeze() {
+    if (
+      current.some((index) =>
+        grid.children[currentPosition + index + width].classList.contains('taken')
+      )
+    ) {
+      current.forEach((index) =>
+        grid.children[currentPosition + index].classList.add('taken')
+      );
+      // Start a new Tetromino falling
+      random = Math.floor(Math.random() * theTetrominoes.length);
+      current = theTetrominoes[random][currentRotation];
+      currentPosition = 4;
+      draw();
+      addScore();
+      gameOver();
+    }
+  }
+
+  // Move the Tetromino left, unless it is at the edge or there is a blockage
+  function moveLeft() {
+    undraw();
+    const isAtLeftEdge = current.some(
+      (index) => (currentPosition + index) % width === 0
+    );
+
+    if (!isAtLeftEdge) currentPosition -= 1;
+
+    if (
+      current.some((index) =>
+        grid.children[currentPosition + index].classList.contains('taken')
+      )
+    ) {
+      currentPosition += 1;
+    }
+
+    draw();
+  }
+
+  // Move the Tetromino right, unless it is at the edge or there is a blockage
+  function moveRight() {
+    undraw();
+    const isAtRightEdge = current.some(
+      (index) => (currentPosition + index) % width === width - 1
+    );
+
+    if (!isAtRightEdge) currentPosition += 1;
+
+    if (
+      current.some((index) =>
+        grid.children[currentPosition + index].classList.contains('taken')
+      )
+    ) {
+      currentPosition -= 1;
+    }
+
+    draw();
+  }
+
+  // Rotate the Tetromino
+  function rotate() {
+    undraw();
+    currentRotation++;
+    if (currentRotation === current.length) {
+      currentRotation = 0;
+    }
+    current = theTetrominoes[random][currentRotation];
+    draw();
+  }
+
+  // Add score
+  function addScore() {
+    for (let i = 0; i < 199; i += width) {
+      const row = [
+        i,
+        i + 1,
+        i + 2,
+        i + 3,
+        i + 4,
+        i + 5,
+        i + 6,
+        i + 7,
+        i + 8,
+        i + 9,
+      ];
+
+      if (row.every((index) => grid.children[index].classList.contains('taken'))) {
+        score += 10;
+        scoreDisplay.innerHTML = score;
+        row.forEach((index) => {
+          grid.children[index].classList.remove('taken');
+          grid.children[index].classList.remove('tetromino');
+          grid.children[index].style.backgroundColor = '';
+        });
+        const squaresRemoved = Array.from(grid.children).splice(i, width);
+        squaresRemoved.forEach((square) => grid.appendChild(square));
       }
     }
   }
-  return false;
-}
 
-function playerDrop() {
-  player.pos.y++;
-  if (collide(arena, player)) {
-    player.pos.y--;
-    merge(arena, player);
-    player.pos.y = 0;
-  }
-  dropCounter = 0;
-}
-
-let dropCounter = 0;
-let dropInterval = 1000;
-
-let lastTime = 0;
-function update(time = 0) {
-  const deltaTime = time - lastTime;
-  lastTime = time;
-
-  dropCounter += deltaTime;
-  if (dropCounter > dropInterval) {
-    playerDrop();
-  }
-
-  draw();
-  requestAnimationFrame(update);
-}
-
-document.addEventListener('keydown', event => {
-  if (event.key === 'ArrowLeft') {
-    player.pos.x--;
-    if (collide(arena, player)) {
-      player.pos.x++;
+  // Game over
+  function gameOver() {
+    if (
+      current.some((index) =>
+        grid.children[currentPosition + index].classList.contains('taken')
+      )
+    ) {
+      scoreDisplay.innerHTML = 'Game Over';
+      clearInterval(timerId);
     }
-  } else if (event.key === 'ArrowRight') {
-    player.pos.x++;
-    if (collide(arena, player)) {
-      player.pos.x--;
-    }
-  } else if (event.key === 'ArrowDown') {
-    playerDrop();
   }
+
+  // Start/Pause button
+  startBtn.addEventListener('click', () => {
+    if (timerId) {
+      clearInterval(timerId);
+      timerId = null;
+    } else {
+      draw();
+      timerId = setInterval(moveDown, 1000);
+    }
+  });
 });
-
-update();
