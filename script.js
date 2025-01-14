@@ -19,6 +19,7 @@ const tetrominos = [
 let board = Array.from({ length: ROWS }, () => Array(COLUMNS).fill(0));
 let currentPiece = createPiece();
 let gameOver = false;
+let gameSpeed = 500; // Tiempo de actualización en milisegundos (más alto = más lento)
 
 function createPiece() {
   const type = Math.floor(Math.random() * tetrominos.length);
@@ -149,9 +150,9 @@ function gameLoop() {
   drawBoard();
   drawPiece();
   dropPiece();
-  requestAnimationFrame(gameLoop);
 }
 
-document.addEventListener('keydown', handleKeyPress);
+// Cambié requestAnimationFrame por setInterval para controlar el tiempo de actualización
+setInterval(gameLoop, gameSpeed);
 
-gameLoop();
+document.addEventListener('keydown', handleKeyPress);
