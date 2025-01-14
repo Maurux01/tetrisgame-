@@ -3,11 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tetris</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Tetris Game</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <canvas id="tetris" width="300" height="600"></canvas>
+  <div class="tetris-container">
+    <h1>Tetris Game</h1>
+    <div class="grid">
+      <!-- 200 cells for the game area -->
+      <div></div>
+      <!-- Repeat the <div></div> block 199 more times, or generate dynamically with JS -->
+    </div>
+    <div class="controls">
+      <p>Score: <span id="score">0</span></p>
+      <button id="start-button">Start/Pause</button>
+    </div>
+  </div>
   <script src="script.js"></script>
 </body>
 </html>
