@@ -1,25 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tetris</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <div class="score">Score: <span id="score">0</span></div>
-    <div class="board" id="board"></div>
-    <div id="game-over" class="message hidden">Game Over! Press 'R' to restart</div>
-    <div id="paused" class="message hidden">Paused - Press 'P' to resume</div>
-    <div class="controls">
-      <p>Controls:</p>
-      <p>← → : Move left/right</p>
-      <p>↑ : Rotate</p>
-      <p>↓ : Move down</p>
-      <p>P : Pause</p>
+    <div class="container">
+        <div class="game-info">
+            <div class="score">Score: <span id="score">0</span></div>
+            <div class="level">Level: <span id="level">1</span></div>
+        </div>
+        <canvas id="tetris" width="240" height="400"></canvas>
+        <div class="controls">
+            <div class="control-button">
+                <button onclick="game.moveLeft()">⬅️</button>
+                <span class="button-desc">Mover Izquierda</span>
+            </div>
+            <div class="control-button">
+                <button onclick="game.moveDown()">⬇️</button>
+                <span class="button-desc">Mover Abajo</span>
+            </div>
+            <div class="control-button">
+                <button onclick="game.moveRight()">➡️</button>
+                <span class="button-desc">Mover Derecha</span>
+            </div>
+            <div class="control-button">
+                <button onclick="game.rotate()">⬆️</button>
+                <span class="button-desc">Rotar Pieza</span>
+            </div>
+        </div>
     </div>
-  </div>
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

@@ -1,199 +1,243 @@
-const BOARD_WIDTH = 10;
-const BOARD_HEIGHT = 20;
-const SHAPES = {
-  I: [[1,1,1,1]],
-  O: [[1,1],[1,1]],
-  T: [[0,1,0],[1,1,1]],
-  S: [[0,1,1],[1,1,0]],
-  Z: [[1,1,0],[0,1,1]],
-  J: [[1,0,0],[1,1,1]],
-  L: [[0,0,1],[1,1,1]]
-};
-
-class Game {
+class Tetris {
   constructor() {
-    this.board = Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(0));
-    this.score = 0;
-    this.currentPiece = null;
-    this.gameOver = false;
-    
-    this.createBoard();
-    this.spawnPiece();
-    this.bindControls();
-    this.gameLoop();
+      this.canvas = document.getElementById('tetris');
+      this.ctx = this.canvas.getContext('2d');
+      this.scoreElement = document.getElementById('score');
+      this.levelElement = document.getElementById('level');
+      
+      // Game properties
+      this.gridWidth = 10;
+      this.gridHeight = 20;
+      this.cellSize = 20;
+      this.score = 0;
+      this.level = 1;
+      this.grid = Array(this.gridHeight).fill().map(() => Array(this.gridWidth).fill(0));
+      
+      // Tetromino shapes
+      this.shapes = [
+          [[1, 1, 1, 1]], // I
+          [[1, 1], [1, 1]], // O
+          [[1, 1, 1], [0, 1, 0]], // T
+          [[1, 1, 1], [1, 0, 0]], // L
+          [[1, 1, 1], [0, 0, 1]], // J
+          [[1, 1, 0], [0, 1, 1]], // S
+          [[0, 1, 1], [1, 1, 0]]  // Z
+      ];
+      
+      // Colors for pieces
+      this.colors = ['#00f0f0', '#f0f000', '#a000f0', '#f0a000', '#0000f0', '#00f000', '#f00000'];
+      
+      this.currentPiece = null;
+      this.currentPieceX = 0;
+      this.currentPieceY = 0;
+      this.currentPieceColor = '';
+      
+      // Bind keyboard controls
+      document.addEventListener('keydown', this.handleKeyPress.bind(this));
+      
+      this.gameLoop = null;
+      this.dropInterval = 1000;
+      
+      this.spawnPiece();
+      this.startGame();
   }
-  
-  createBoard() {
-    const board = document.getElementById('game-board');
-    for (let y = 0; y < BOARD_HEIGHT; y++) {
-      const row = document.createElement('div');
-      row.className = 'row';
-      for (let x = 0; x < BOARD_WIDTH; x++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell empty';
-        row.appendChild(cell);
-      }
-      board.appendChild(row);
-    }
-  }
-  
+
   spawnPiece() {
-    const pieces = Object.entries(SHAPES);
-    const [type, shape] = pieces[Math.floor(Math.random() * pieces.length)];
-    this.currentPiece = {
-      type,
-      shape: JSON.parse(JSON.stringify(shape)),
-      x: Math.floor((BOARD_WIDTH - shape[0].length) / 2),
-      y: 0
-    };
-    
-    if (!this.isValidMove(0, 0)) {
-      this.gameOver = true;
+      const shapeIndex = Math.floor(Math.random() * this.shapes.length);
+      this.currentPiece = this.shapes[shapeIndex];
+      this.currentPieceColor = this.colors[shapeIndex];
+      this.currentPieceX = Math.floor((this.gridWidth - this.currentPiece[0].length) / 2);
+      this.currentPieceY = 0;
+      
+      if (this.checkCollision()) {
+          this.gameOver();
+      }
+  }
+
+  draw() {
+      // Clear canvas
+      this.ctx.fillStyle = '#000';
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      
+      // Draw grid
+      for (let y = 0; y < this.gridHeight; y++) {
+          for (let x = 0; x < this.gridWidth; x++) {
+              if (this.grid[y][x]) {
+                  this.ctx.fillStyle = this.grid[y][x];
+                  this.ctx.fillRect(x * this.cellSize, y * this.cellSize, this.cellSize - 1, this.cellSize - 1);
+              }
+          }
+      }
+      
+      // Draw current piece
+      if (this.currentPiece) {
+          this.ctx.fillStyle = this.currentPieceColor;
+          for (let y = 0; y < this.currentPiece.length; y++) {
+              for (let x = 0; x < this.currentPiece[y].length; x++) {
+                  if (this.currentPiece[y][x]) {
+                      this.ctx.fillRect(
+                          (this.currentPieceX + x) * this.cellSize,
+                          (this.currentPieceY + y) * this.cellSize,
+                          this.cellSize - 1,
+                          this.cellSize - 1
+                      );
+                  }
+              }
+          }
+      }
+  }
+
+  checkCollision() {
+      for (let y = 0; y < this.currentPiece.length; y++) {
+          for (let x = 0; x < this.currentPiece[y].length; x++) {
+              if (this.currentPiece[y][x]) {
+                  const newX = this.currentPieceX + x;
+                  const newY = this.currentPieceY + y;
+                  
+                  if (newX < 0 || newX >= this.gridWidth || 
+                      newY >= this.gridHeight ||
+                      (newY >= 0 && this.grid[newY][newX])) {
+                      return true;
+                  }
+              }
+          }
+      }
+      return false;
+  }
+
+  mergePiece() {
+      for (let y = 0; y < this.currentPiece.length; y++) {
+          for (let x = 0; x < this.currentPiece[y].length; x++) {
+              if (this.currentPiece[y][x]) {
+                  const gridY = this.currentPieceY + y;
+                  if (gridY >= 0) {
+                      this.grid[gridY][this.currentPieceX + x] = this.currentPieceColor;
+                  }
+              }
+          }
+      }
+      this.checkLines();
+      this.spawnPiece();
+  }
+
+  moveDown() {
+      this.currentPieceY++;
+      if (this.checkCollision()) {
+          this.currentPieceY--;
+          this.mergePiece();
+      }
+      this.draw();
+  }
+
+  hardDrop() {
+      while (!this.checkCollision()) {
+          this.currentPieceY++;
+      }
+      this.currentPieceY--;
+      this.mergePiece();
+      this.draw();
+  }
+
+  moveLeft() {
+      this.currentPieceX--;
+      if (this.checkCollision()) {
+          this.currentPieceX++;
+      }
+      this.draw();
+  }
+
+  moveRight() {
+      this.currentPieceX++;
+      if (this.checkCollision()) {
+          this.currentPieceX--;
+      }
+      this.draw();
+  }
+
+  rotate() {
+      const newPiece = this.currentPiece[0].map((_, i) =>
+          this.currentPiece.map(row => row[i]).reverse()
+      );
+      
+      const oldPiece = this.currentPiece;
+      this.currentPiece = newPiece;
+      
+      if (this.checkCollision()) {
+          this.currentPiece = oldPiece;
+      }
+      
+      this.draw();
+  }
+
+  checkLines() {
+      for (let y = this.gridHeight - 1; y >= 0; y--) {
+          if (this.grid[y].every(cell => cell !== 0)) {
+              // Remove the line
+              this.grid.splice(y, 1);
+              // Add new empty line at top
+              this.grid.unshift(Array(this.gridWidth).fill(0));
+              
+              this.score += 100;
+              this.scoreElement.textContent = this.score;
+              
+              if (this.score % 1000 === 0) {
+                  this.level++;
+                  this.levelElement.textContent = this.level;
+                  this.dropInterval = Math.max(100, 1000 - (this.level - 1) * 100);
+                  this.restartGameLoop();
+              }
+          }
+      }
+  }
+
+  handleKeyPress(event) {
+      switch(event.keyCode) {
+          case 37: // Left arrow
+              this.moveLeft();
+              break;
+          case 39: // Right arrow
+              this.moveRight();
+              break;
+          case 40: // Down arrow
+              this.moveDown();
+              break;
+          case 38: // Up arrow
+              this.rotate();
+              break;
+          case 32: // Space bar
+              this.hardDrop();
+              break;
+      }
+  }
+
+  gameOver() {
+      clearInterval(this.gameLoop);
       alert('Game Over! Score: ' + this.score);
       this.reset();
-    }
   }
-  
-  isValidMove(moveX, moveY, newShape = null) {
-    const shape = newShape || this.currentPiece.shape;
-    const newX = this.currentPiece.x + moveX;
-    const newY = this.currentPiece.y + moveY;
-    
-    return shape.every((row, y) =>
-      row.every((cell, x) => {
-        if (!cell) return true;
-        const boardX = newX + x;
-        const boardY = newY + y;
-        return (
-          boardX >= 0 &&
-          boardX < BOARD_WIDTH &&
-          boardY < BOARD_HEIGHT &&
-          !this.board[boardY]?.[boardX]
-        );
-      })
-    );
-  }
-  
-  rotate() {
-    const newShape = this.currentPiece.shape[0].map((_, i) =>
-      this.currentPiece.shape.map(row => row[i]).reverse()
-    );
-    if (this.isValidMove(0, 0, newShape)) {
-      this.currentPiece.shape = newShape;
-      this.draw();
-    }
-  }
-  
-  moveDown() {
-    if (this.isValidMove(0, 1)) {
-      this.currentPiece.y++;
-      this.draw();
-      return true;
-    }
-    this.lockPiece();
-    return false;
-  }
-  
-  moveHorizontal(dir) {
-    if (this.isValidMove(dir, 0)) {
-      this.currentPiece.x += dir;
-      this.draw();
-    }
-  }
-  
-  lockPiece() {
-    this.currentPiece.shape.forEach((row, y) => {
-      row.forEach((cell, x) => {
-        if (cell) {
-          const boardY = this.currentPiece.y + y;
-          const boardX = this.currentPiece.x + x;
-          this.board[boardY][boardX] = this.currentPiece.type;
-        }
-      });
-    });
-    
-    this.clearLines();
-    this.spawnPiece();
-  }
-  
-  clearLines() {
-    for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
-      if (this.board[y].every(cell => cell)) {
-        this.board.splice(y, 1);
-        this.board.unshift(Array(BOARD_WIDTH).fill(0));
-        this.score += 100;
-        document.getElementById('score').textContent = this.score;
-      }
-    }
-  }
-  
-  draw() {
-    const cells = document.getElementsByClassName('cell');
-    let index = 0;
-    
-    // Clear board
-    for (let y = 0; y < BOARD_HEIGHT; y++) {
-      for (let x = 0; x < BOARD_WIDTH; x++) {
-        cells[index].className = 'cell ' + (this.board[y][x] || 'empty');
-        index++;
-      }
-    }
-    
-    // Draw current piece
-    this.currentPiece.shape.forEach((row, y) => {
-      row.forEach((cell, x) => {
-        if (cell) {
-          const boardY = this.currentPiece.y + y;
-          const boardX = this.currentPiece.x + x;
-          if (boardY >= 0) {
-            const index = boardY * BOARD_WIDTH + boardX;
-            cells[index].className = 'cell ' + this.currentPiece.type;
-          }
-        }
-      });
-    });
-  }
-  
-  bindControls() {
-    document.addEventListener('keydown', (e) => {
-      if (this.gameOver) return;
-      
-      switch(e.key) {
-        case 'ArrowLeft':
-          this.moveHorizontal(-1);
-          break;
-        case 'ArrowRight':
-          this.moveHorizontal(1);
-          break;
-        case 'ArrowDown':
-          this.moveDown();
-          break;
-        case 'ArrowUp':
-          this.rotate();
-          break;
-        case ' ':
-          while(this.moveDown());
-          break;
-      }
-    });
-  }
-  
+
   reset() {
-    this.board = Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(0));
-    this.score = 0;
-    this.gameOver = false;
-    document.getElementById('score').textContent = '0';
-    this.spawnPiece();
+      this.grid = Array(this.gridHeight).fill().map(() => Array(this.gridWidth).fill(0));
+      this.score = 0;
+      this.level = 1;
+      this.scoreElement.textContent = this.score;
+      this.levelElement.textContent = this.level;
+      this.dropInterval = 1000;
+      this.spawnPiece();
+      this.startGame();
   }
-  
-  gameLoop() {
-    setInterval(() => {
-      if (!this.gameOver) {
-        this.moveDown();
-      }
-    }, 1000);
+
+  restartGameLoop() {
+      clearInterval(this.gameLoop);
+      this.startGame();
+  }
+
+  startGame() {
+      this.gameLoop = setInterval(() => {
+          this.moveDown();
+      }, this.dropInterval);
   }
 }
 
 // Start the game
-new Game();
+const game = new Tetris();
