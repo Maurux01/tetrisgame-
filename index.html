@@ -1,41 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetris Game</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tetris</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="wrapper">
-        <div id="game-container">
-            <div class="game-area">
-                <canvas id="game-board" width="300" height="600"></canvas>
-            </div>
-            <div id="score-container">
-                <div class="stat-box">
-                    <h2>Score</h2>
-                    <span id="score">0</span>
-                </div>
-                <div class="stat-box">
-                    <h2>Level</h2>
-                    <span id="level">1</span>
-                </div>
-                <div class="controls">
-                    <button onclick="startGame()">New Game</button>
-                    <div class="instructions">
-                        <p>← → : Move</p>
-                        <p>↑ : Rotate</p>
-                        <p>↓ : Drop</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="game-over" id="game-over">
-            <h2>Game Over!</h2>
-            <p>Final Score: <span id="final-score">0</span></p>
-        </div>
+  <div class="container">
+    <div class="score">Score: <span id="score">0</span></div>
+    <div class="board" id="board"></div>
+    <div id="game-over" class="message hidden">Game Over! Press 'R' to restart</div>
+    <div id="paused" class="message hidden">Paused - Press 'P' to resume</div>
+    <div class="controls">
+      <p>Controls:</p>
+      <p>← → : Move left/right</p>
+      <p>↑ : Rotate</p>
+      <p>↓ : Move down</p>
+      <p>P : Pause</p>
     </div>
-    <script src="script.js"></script>
+  </div>
+  <script src="script.js"></script>
 </body>
 </html>
