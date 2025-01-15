@@ -1,26 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
-<head> 
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tetris Game</title>
-  <link rel="stylesheet" href="style.css">
+<html>
+<head>
+    <title>Tetris Game</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="tetris-container">
-    <h1>Tetris Game</h1>
-    <div class="grid">
-      <!-- 200 cells for the game area -->
-      <div></div>
-      <!-- Repeat the <div></div> block 199 more times, or generate dynamically with JS -->
+    <div id="game-container">
+        <canvas id="game-board" width="300" height="600"></canvas>
+        <div id="score-container">
+            <h2>Score: <span id="score">0</span></h2>
+            <h2>Level: <span id="level">1</span></h2>
+            <button onclick="startGame()">New Game</button>
+        </div>
     </div>
-    <div class="controls">
-      <p>Score: <span id="score">0</span></p>
-      <button id="start-button">Start/Pause</button>
-    </div>
-  </div>
-  <canvas id="tetris" width="300" height="600"></canvas>
-  <script src="script.js"></script>
+    <div class="game-over" id="game-over">Game Over!</div>
+    <script src="script.js"></script>
 </body>
 </html>
-  
