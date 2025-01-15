@@ -9,6 +9,10 @@ footer {
     background: var(--glass-bg);
     backdrop-filter: blur(4px);
     border-top: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
 }
 
 footer a {
@@ -16,13 +20,34 @@ footer a {
     text-decoration: none;
     font-weight: bold;
     transition: all 0.3s ease;
+    padding: 8px 15px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.05);
 }
 
 footer a:hover {
     color: var(--secondary-color);
-    text-shadow: 0 0 10px rgba(0, 255, 170, 0.5);
+    text-shadow: 0 0 10px rgba(78, 204, 163, 0.5);
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
 }
 
+/* Ajuste para el contenido principal */
+.wrapper {
+    margin-bottom: 60px; /* Espacio para el footer */
+}
+
+/* Animación para el corazón */
+@keyframes heartBeat {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+footer a:hover .heart {
+    display: inline-block;
+    animation: heartBeat 1s infinite;
+}
 /* Estilos para el botón de pausa */
 #pauseButton {
     background: linear-gradient(45deg, #f0a500, #c17900);
