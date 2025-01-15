@@ -212,3 +212,9 @@ document.addEventListener('keydown', (e) => {
 });
 
 startGame();
+
+function endGame() {
+    clearInterval(gameLoop);
+    document.getElementById('game-over').style.display = 'block';
+    document.getElementById('final-score').textContent = score;
+}
