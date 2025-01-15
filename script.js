@@ -218,3 +218,76 @@ function endGame() {
     document.getElementById('game-over').style.display = 'block';
     document.getElementById('final-score').textContent = score;
 }
+
+// Al inicio del archivo, añade estas variables
+let isPaused = false;
+const pauseButton = document.getElementById('pauseButton');
+
+// Función para alternar la pausa
+function togglePause() {
+    isPaused = !isPaused;
+    if (isPaused) {
+        clearInterval(gameLoop);
+        pauseButton.textContent = 'Resume';
+        pauseButton.classList.add('paused');
+    } else {
+        gameLoop = setInterval(() => update(), 1000 / level);
+        pauseButton.textContent = 'Pause';
+        pauseButton.classList.remove('paused');
+    }
+}
+
+// Modifica el event listener del teclado para incluir la tecla P
+document.addEventListener('keydown', (e) => {
+    if (gameOver) return;
+    
+    if (e.key === 'p' || e.key === 'P') {
+        togglePause();
+        return;
+    }
+
+    if (isPaused) return;
+    
+    switch (e.key) {
+        case 'ArrowLeft':
+            if (!collision(currentPiece, -1, 0)) {
+                currentPiece.x--;
+                draw();
+            }
+            break;
+        case 'ArrowRight':
+            if (!collision(currentPiece, 1, 0)) {
+                currentPiece.x++;
+                draw();
+            }
+            break;
+        case 'ArrowDown':
+            if (!collision(currentPiece, 0, 1)) {
+                currentPiece.y++;
+                draw();
+            }
+            break;
+        case 'ArrowUp':
+            rotatePiece();
+            draw();
+            break;
+    }
+});
+
+// Modifica la función startGame para resetear el estado de pausa
+function startGame() {
+    gameBoard = Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(0));
+    score = 0;
+    level = 1;
+    gameOver = false;
+    isPaused = false;
+    pauseButton.textContent = 'Pause';
+    pauseButton.classList.remove('paused');
+    document.getElementById('score').textContent = '0';
+    document.getElementById('level').textContent = '1';
+    document.getElementById('game-over').style.display = 'none';
+    currentPiece = createNewPiece();
+    if (gameLoop) clearInterval(gameLoop);
+    gameLoop = setInterval(() => update(), 1000 / level);
+    draw();
+}

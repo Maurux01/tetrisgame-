@@ -23,10 +23,12 @@
                 </div>
                 <div class="controls">
                     <button onclick="startGame()">New Game</button>
+                    <button id="pauseButton" onclick="togglePause()">Pause</button>
                     <div class="instructions">
                         <p>← → : Move</p>
                         <p>↑ : Rotate</p>
                         <p>↓ : Drop</p>
+                        <p>P : Pause</p>
                     </div>
                 </div>
             </div>
@@ -36,6 +38,11 @@
             <p>Final Score: <span id="final-score">0</span></p>
         </div>
     </div>
+    <footer>
+        <a href="https://github.com/maurux01" target="_blank">
+            Made with ❤️ by maurux01
+        </a>
+    </footer>
     <script src="script.js"></script>
 </body>
 </html>
