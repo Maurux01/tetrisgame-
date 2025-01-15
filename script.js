@@ -1,222 +1,164 @@
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
-
-const TETROMINOES = {
-  I: {
-    shape: [[1, 1, 1, 1]],
-    class: 'cyan'
-  },
-  J: {
-    shape: [
-      [1, 0, 0],
-      [1, 1, 1]
-    ],
-    class: 'blue'
-  },
-  L: {
-    shape: [
-      [0, 0, 1],
-      [1, 1, 1]
-    ],
-    class: 'orange'
-  },
-  O: {
-    shape: [
-      [1, 1],
-      [1, 1]
-    ],
-    class: 'yellow'
-  },
-  S: {
-    shape: [
-      [0, 1, 1],
-      [1, 1, 0]
-    ],
-    class: 'green'
-  },
-  T: {
-    shape: [
-      [0, 1, 0],
-      [1, 1, 1]
-    ],
-    class: 'purple'
-  },
-  Z: {
-    shape: [
-      [1, 1, 0],
-      [0, 1, 1]
-    ],
-    class: 'red'
-  }
+const SHAPES = {
+  I: [[1,1,1,1]],
+  O: [[1,1],[1,1]],
+  T: [[0,1,0],[1,1,1]],
+  S: [[0,1,1],[1,1,0]],
+  Z: [[1,1,0],[0,1,1]],
+  J: [[1,0,0],[1,1,1]],
+  L: [[0,0,1],[1,1,1]]
 };
 
-class Tetris {
+class Game {
   constructor() {
-    this.board = Array.from({ length: BOARD_HEIGHT }, () =>
-      Array(BOARD_WIDTH).fill(null)
-    );
+    this.board = Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(0));
     this.score = 0;
+    this.currentPiece = null;
     this.gameOver = false;
-    this.isPaused = false;
-    this.currentPiece = this.createNewPiece();
-    this.boardElement = document.getElementById('board');
-    this.scoreElement = document.getElementById('score');
-    this.gameOverElement = document.getElementById('game-over');
-    this.pausedElement = document.getElementById('paused');
     
-    this.initBoard();
+    this.createBoard();
+    this.spawnPiece();
     this.bindControls();
-    this.startGameLoop();
+    this.gameLoop();
   }
-
-  initBoard() {
-    this.boardElement.innerHTML = '';
+  
+  createBoard() {
+    const board = document.getElementById('game-board');
     for (let y = 0; y < BOARD_HEIGHT; y++) {
+      const row = document.createElement('div');
+      row.className = 'row';
       for (let x = 0; x < BOARD_WIDTH; x++) {
         const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.setAttribute('data-x', x);
-        cell.setAttribute('data-y', y);
-        this.boardElement.appendChild(cell);
+        cell.className = 'cell empty';
+        row.appendChild(cell);
       }
+      board.appendChild(row);
     }
   }
-
-  createNewPiece() {
-    const keys = Object.keys(TETROMINOES);
-    const tetromino = TETROMINOES[keys[Math.floor(Math.random() * keys.length)]];
-    return {
-      shape: tetromino.shape,
-      class: tetromino.class,
-      position: { x: 4, y: 0 }
+  
+  spawnPiece() {
+    const pieces = Object.entries(SHAPES);
+    const [type, shape] = pieces[Math.floor(Math.random() * pieces.length)];
+    this.currentPiece = {
+      type,
+      shape: JSON.parse(JSON.stringify(shape)),
+      x: Math.floor((BOARD_WIDTH - shape[0].length) / 2),
+      y: 0
     };
+    
+    if (!this.isValidMove(0, 0)) {
+      this.gameOver = true;
+      alert('Game Over! Score: ' + this.score);
+      this.reset();
+    }
   }
-
-  isValidMove(shape, x, y) {
-    return shape.every((row, dy) =>
-      row.every((cell, dx) => {
+  
+  isValidMove(moveX, moveY, newShape = null) {
+    const shape = newShape || this.currentPiece.shape;
+    const newX = this.currentPiece.x + moveX;
+    const newY = this.currentPiece.y + moveY;
+    
+    return shape.every((row, y) =>
+      row.every((cell, x) => {
         if (!cell) return true;
-        const newX = x + dx;
-        const newY = y + dy;
+        const boardX = newX + x;
+        const boardY = newY + y;
         return (
-          newX >= 0 &&
-          newX < BOARD_WIDTH &&
-          newY < BOARD_HEIGHT &&
-          (newY < 0 || this.board[newY][newX] === null)
+          boardX >= 0 &&
+          boardX < BOARD_WIDTH &&
+          boardY < BOARD_HEIGHT &&
+          !this.board[boardY]?.[boardX]
         );
       })
     );
   }
-
+  
   rotate() {
-    if (this.gameOver || this.isPaused) return;
-    const rotated = this.currentPiece.shape[0].map((_, i) =>
+    const newShape = this.currentPiece.shape[0].map((_, i) =>
       this.currentPiece.shape.map(row => row[i]).reverse()
     );
-    if (this.isValidMove(rotated, this.currentPiece.position.x, this.currentPiece.position.y)) {
-      this.currentPiece.shape = rotated;
-      this.render();
+    if (this.isValidMove(0, 0, newShape)) {
+      this.currentPiece.shape = newShape;
+      this.draw();
     }
   }
-
-  moveHorizontal(dir) {
-    if (this.gameOver || this.isPaused) return;
-    const newX = this.currentPiece.position.x + dir;
-    if (this.isValidMove(this.currentPiece.shape, newX, this.currentPiece.position.y)) {
-      this.currentPiece.position.x = newX;
-      this.render();
-    }
-  }
-
+  
   moveDown() {
-    if (this.gameOver || this.isPaused) return;
-    
-    const newY = this.currentPiece.position.y + 1;
-    if (this.isValidMove(this.currentPiece.shape, this.currentPiece.position.x, newY)) {
-      this.currentPiece.position.y = newY;
-      this.render();
+    if (this.isValidMove(0, 1)) {
+      this.currentPiece.y++;
+      this.draw();
       return true;
     }
-    
     this.lockPiece();
     return false;
   }
-
+  
+  moveHorizontal(dir) {
+    if (this.isValidMove(dir, 0)) {
+      this.currentPiece.x += dir;
+      this.draw();
+    }
+  }
+  
   lockPiece() {
     this.currentPiece.shape.forEach((row, y) => {
       row.forEach((cell, x) => {
         if (cell) {
-          const boardY = this.currentPiece.position.y + y;
-          const boardX = this.currentPiece.position.x + x;
-          if (boardY >= 0) {
-            this.board[boardY][boardX] = this.currentPiece.class;
-          }
+          const boardY = this.currentPiece.y + y;
+          const boardX = this.currentPiece.x + x;
+          this.board[boardY][boardX] = this.currentPiece.type;
         }
       });
     });
-
-    this.clearLines();
-    this.currentPiece = this.createNewPiece();
     
-    if (!this.isValidMove(this.currentPiece.shape, this.currentPiece.position.x, this.currentPiece.position.y)) {
-      this.gameOver = true;
-      this.gameOverElement.classList.remove('hidden');
+    this.clearLines();
+    this.spawnPiece();
+  }
+  
+  clearLines() {
+    for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
+      if (this.board[y].every(cell => cell)) {
+        this.board.splice(y, 1);
+        this.board.unshift(Array(BOARD_WIDTH).fill(0));
+        this.score += 100;
+        document.getElementById('score').textContent = this.score;
+      }
     }
   }
-
-  clearLines() {
-    let linesCleared = 0;
-    for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
-      if (this.board[y].every(cell => cell !== null)) {
-        this.board.splice(y, 1);
-        this.board.unshift(Array(BOARD_WIDTH).fill(null));
-        linesCleared++;
-        y++;
+  
+  draw() {
+    const cells = document.getElementsByClassName('cell');
+    let index = 0;
+    
+    // Clear board
+    for (let y = 0; y < BOARD_HEIGHT; y++) {
+      for (let x = 0; x < BOARD_WIDTH; x++) {
+        cells[index].className = 'cell ' + (this.board[y][x] || 'empty');
+        index++;
       }
     }
     
-    if (linesCleared > 0) {
-      this.score += linesCleared * 100;
-      this.scoreElement.textContent = this.score;
-    }
-  }
-
-  render() {
-    const cells = this.boardElement.getElementsByClassName('cell');
-    
-    // Clear all cells
-    Array.from(cells).forEach(cell => {
-      cell.className = 'cell';
-    });
-    
-    // Render locked pieces
-    this.board.forEach((row, y) => {
-      row.forEach((cell, x) => {
-        if (cell) {
-          const index = y * BOARD_WIDTH + x;
-          cells[index].classList.add(cell);
-        }
-      });
-    });
-    
-    // Render current piece
+    // Draw current piece
     this.currentPiece.shape.forEach((row, y) => {
       row.forEach((cell, x) => {
         if (cell) {
-          const boardY = this.currentPiece.position.y + y;
-          const boardX = this.currentPiece.position.x + x;
-          if (boardY >= 0 && boardY < BOARD_HEIGHT) {
+          const boardY = this.currentPiece.y + y;
+          const boardX = this.currentPiece.x + x;
+          if (boardY >= 0) {
             const index = boardY * BOARD_WIDTH + boardX;
-            cells[index].classList.add(this.currentPiece.class);
+            cells[index].className = 'cell ' + this.currentPiece.type;
           }
         }
       });
     });
   }
-
+  
   bindControls() {
-    document.addEventListener('keydown', (event) => {
-      switch(event.key) {
+    document.addEventListener('keydown', (e) => {
+      if (this.gameOver) return;
+      
+      switch(e.key) {
         case 'ArrowLeft':
           this.moveHorizontal(-1);
           break;
@@ -229,38 +171,24 @@ class Tetris {
         case 'ArrowUp':
           this.rotate();
           break;
-        case 'p':
-          this.togglePause();
-          break;
-        case 'r':
-          if (this.gameOver) this.reset();
+        case ' ':
+          while(this.moveDown());
           break;
       }
     });
   }
-
-  togglePause() {
-    this.isPaused = !this.isPaused;
-    this.pausedElement.classList.toggle('hidden', !this.isPaused);
-  }
-
+  
   reset() {
-    this.board = Array.from({ length: BOARD_HEIGHT }, () =>
-      Array(BOARD_WIDTH).fill(null)
-    );
+    this.board = Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(0));
     this.score = 0;
     this.gameOver = false;
-    this.isPaused = false;
-    this.currentPiece = this.createNewPiece();
-    this.scoreElement.textContent = '0';
-    this.gameOverElement.classList.add('hidden');
-    this.pausedElement.classList.add('hidden');
-    this.render();
+    document.getElementById('score').textContent = '0';
+    this.spawnPiece();
   }
-
-  startGameLoop() {
+  
+  gameLoop() {
     setInterval(() => {
-      if (!this.gameOver && !this.isPaused) {
+      if (!this.gameOver) {
         this.moveDown();
       }
     }, 1000);
@@ -268,4 +196,4 @@ class Tetris {
 }
 
 // Start the game
-new Tetris();
+new Game();
