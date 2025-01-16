@@ -11,7 +11,7 @@ body {
 
 .container {
   text-align: center;
-  max-width: 400px; /* Ajusta el tamaño para mantener las proporciones */
+  max-width: 330px; /* Ajusta el tamaño para mantener las proporciones */
 }
 
 canvas {
