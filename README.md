@@ -1,6 +1,6 @@
- Based on the information from your GitHub repository, here's a README file in English for your Tetris game:
-
 # Tetris Game
+
+![image](https://github.com/user-attachments/assets/c764afac-256a-43fa-8d1a-5f7edf8bf312)
 
 Welcome to **Tetris Game**! This is a browser-based implementation of the classic Tetris game, developed using JavaScript, HTML, and CSS.
 
