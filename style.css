@@ -11,31 +11,42 @@ body {
 
 .container {
   text-align: center;
-  max-width: 250px;
+  max-width: 200px; /* Exactly matches game grid width (10 cells × 20px) */
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  background: transparent;
 }
 
 canvas {
   border: 2px solid #fff;
   background-color: #000;
   display: block;
-  margin: 0 auto;
+  margin: 0;
   box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  width: 200px; /* Exactly 10 cells */
+  height: 400px; /* Exactly 20 cells */
 }
 
 .game-info {
   color: white;
   font-size: 1.2em;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   display: flex;
   justify-content: space-around;
   background: rgba(52, 73, 94, 0.6);
   padding: 10px;
   border-radius: 8px;
   backdrop-filter: blur(5px);
+  width: 100%; /* Make it match the canvas width */
 }
 
 .controls {
-  margin-top: 20px;
+  width: 100%; /* Make it match the canvas width */
+  margin-top: 10px;
   display: flex;
   justify-content: center;
   gap: 15px;
